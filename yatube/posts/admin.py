@@ -7,6 +7,8 @@ class PostAdmin(admin.ModelAdmin):
     search_fields = ("text",)
     list_filter = ("pub_date",)
 
+    empty_value_display = '-пусто-'
+
 
 class GroupAdmin(admin.ModelAdmin):
     list_display = ("title", "slug", "description")

@@ -1,5 +1,5 @@
-from .models import Post, User
-from django.shortcuts import render, redirect
+from .models import Post, User, Group
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 
 from .forms import PostForm
@@ -34,3 +34,10 @@ def view_post(request, username, post_id):
     post = Post.objects.get(pk=post_id)
 
     return render(request, 'post.html', {"profile": profile, "post": post})
+
+
+def group_posts(request, slug):
+    group = get_object_or_404(Group, slug=slug)
+
+    posts = Post.objects.filter(group=group).order_by("-pub_date")[:12]
+    return render(request, "group.html", {"group": group, "posts": posts})
