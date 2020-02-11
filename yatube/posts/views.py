@@ -38,8 +38,9 @@ def new_post(request):
 def view_post(request, username, post_id):
     profile = User.objects.get(username=username)
     post = Post.objects.get(pk=post_id)
+    posts_count = Post.objects.filter(author__id=profile.id).count()
 
-    return render(request, 'post.html', {"profile": profile, "post": post})
+    return render(request, 'post.html', {"profile": profile, "post": post, "posts_count": posts_count})
 
 
 def group_posts(request, slug):
@@ -47,3 +48,38 @@ def group_posts(request, slug):
 
     posts = Post.objects.filter(group=group).order_by("-pub_date")[:12]
     return render(request, "group.html", {"group": group, "posts": posts})
+
+
+def profile(request, username):
+    post_list = Post.objects.filter(author__username=username).order_by("-pub_date").all()
+    paginator = Paginator(post_list, 10)
+
+    page_number = request.GET.get('page')
+    page = paginator.get_page(page_number)
+
+    profile = User.objects.get(username=username)
+    posts_count = Post.objects.filter(author__id=profile.id).count()
+
+    return render(request, "profile.html", {'profile': profile, 'page': page, 'paginator': paginator, "posts_count": posts_count})
+
+
+def post_edit(request, username, post_id):
+    if request.user.username != username:
+        return redirect("/")
+
+    post = Post.objects.get(pk=post_id)
+    print(post)
+
+    if request.method == "POST":
+        form = PostForm(request.POST)
+        if form.is_valid():
+            user = request.user
+            post.text = form.cleaned_data["text"]
+            post.group = form.cleaned_data["group"]
+            post.save()
+
+            return redirect(f"/{user.username}/{post.id}")
+        return render(request, 'new_post.html', {"form": form, "edit": True})
+
+    form = PostForm(instance=post)
+    return render(request, 'new_post.html', {"form": form, "edit": True})
