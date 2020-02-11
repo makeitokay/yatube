@@ -1,3 +1,5 @@
+from django.core.paginator import Paginator
+
 from .models import Post, User, Group
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -7,8 +9,12 @@ from .forms import PostForm
 
 @login_required
 def index(request):
-    latest = Post.objects.order_by("-pub_date")[:11]
-    return render(request, "index.html", {"posts": latest})
+    post_list = Post.objects.order_by("-pub_date").all()
+    paginator = Paginator(post_list, 10)
+
+    page_number = request.GET.get('page')
+    page = paginator.get_page(page_number)
+    return render(request, 'index.html', {'page': page, 'paginator': paginator})
 
 
 @login_required
