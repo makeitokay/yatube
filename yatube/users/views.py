@@ -8,3 +8,8 @@ class SignUp(CreateView):
     form_class = CreationForm
     success_url = "/auth/login/"
     template_name = "signup.html"
+
+    def form_valid(self, form):
+        email = form["email"]
+        form.send_sign_up_mail(email)
+        return super().form_valid(form)
