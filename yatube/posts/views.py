@@ -7,7 +7,6 @@ from django.contrib.auth.decorators import login_required
 from .forms import PostForm
 
 
-@login_required
 def index(request):
     post_list = Post.objects.order_by("-pub_date").all()
     paginator = Paginator(post_list, 10)
@@ -34,7 +33,6 @@ def new_post(request):
     return render(request, 'new_post.html', {"form": form})
 
 
-@login_required
 def view_post(request, username, post_id):
     profile = User.objects.get(username=username)
     post = Post.objects.get(pk=post_id)
@@ -46,19 +44,23 @@ def view_post(request, username, post_id):
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
 
-    posts = Post.objects.filter(group=group).order_by("-pub_date")[:12]
-    return render(request, "group.html", {"group": group, "posts": posts})
+    posts = Post.objects.filter(group=group).order_by("-pub_date").all()
+    paginator = Paginator(posts, 10)
+
+    page_number = request.GET.get('page')
+    page = paginator.get_page(page_number)
+    return render(request, "group.html", {"group": group, "posts": posts, "page": page, "paginator": paginator})
 
 
 def profile(request, username):
-    post_list = Post.objects.filter(author__username=username).order_by("-pub_date").all()
+    profile = get_object_or_404(User, username=username)
+    post_list = Post.objects.filter(author=profile).order_by("-pub_date").all()
     paginator = Paginator(post_list, 10)
 
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
 
-    profile = User.objects.get(username=username)
-    posts_count = Post.objects.filter(author__id=profile.id).count()
+    posts_count = Post.objects.filter(author=profile).count()
 
     return render(request, "profile.html", {'profile': profile, 'page': page, 'paginator': paginator, "posts_count": posts_count})
 
@@ -82,4 +84,5 @@ def post_edit(request, username, post_id):
         return render(request, 'new_post.html', {"form": form, "edit": True})
 
     form = PostForm(instance=post)
-    return render(request, 'new_post.html', {"form": form, "edit": True})
+    return render(request, 'new_post.html', {"form": form, "edit": True, "post": post})
+

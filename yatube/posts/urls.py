@@ -9,5 +9,5 @@ urlpatterns = [
     path("group/<slug>/", views.group_posts, name="group_posts"),
 
     path("<username>/", views.profile, name="profile"),
-    path("<username>/<int:post_id>/edit", views.post_edit, name="post_edit"),
+    path("<username>/<int:post_id>/edit/", views.post_edit, name="post_edit"),
 ]
