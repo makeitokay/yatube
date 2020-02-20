@@ -69,20 +69,17 @@ def post_edit(request, username, post_id):
     if request.user.username != username:
         return redirect("/")
 
-    post = Post.objects.get(pk=post_id)
-    print(post)
+    post = get_object_or_404(Post, pk=post_id, author__username=username)
 
     if request.method == "POST":
         form = PostForm(request.POST)
         if form.is_valid():
-            user = request.user
             post.text = form.cleaned_data["text"]
             post.group = form.cleaned_data["group"]
             post.save()
 
-            return redirect(f"/{user.username}/{post.id}")
-        return render(request, 'new_post.html', {"form": form, "edit": True})
+            return redirect(f"/{username}/{post.id}")
+        return render(request, 'edit_post.html', {"form": form})
 
     form = PostForm(instance=post)
-    return render(request, 'new_post.html', {"form": form, "edit": True, "post": post})
-
+    return render(request, 'edit_post.html', {"form": form, "post": post})
