@@ -66,10 +66,10 @@ def profile(request, username):
 
 
 def post_edit(request, username, post_id):
-    if request.user.username != username:
-        return redirect("/")
-
     post = get_object_or_404(Post, pk=post_id, author__username=username)
+
+    if request.user.username != username:
+        return redirect(f"/{username}/{post.id}")
 
     if request.method == "POST":
         form = PostForm(request.POST)
