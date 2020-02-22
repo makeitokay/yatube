@@ -26,7 +26,7 @@ def new_post(request):
             group = form.cleaned_data["group"]
             post = Post.objects.create(text=text, group=group, author=user)
 
-            return redirect(f"/{user.username}/{post.id}")
+            return redirect("post", username=user.username, post_id=post.id)
         return render(request, 'new_post.html', {"form": form})
 
     form = PostForm()
@@ -69,16 +69,16 @@ def post_edit(request, username, post_id):
     post = get_object_or_404(Post, pk=post_id, author__username=username)
 
     if request.user.username != username:
-        return redirect(f"/{username}/{post.id}")
+        return redirect("post", username=username, post_id=post.id)
 
     if request.method == "POST":
-        form = PostForm(request.POST)
+        form = PostForm(request.POST, instance=post)
         if form.is_valid():
             post.text = form.cleaned_data["text"]
             post.group = form.cleaned_data["group"]
             post.save()
 
-            return redirect(f"/{username}/{post.id}")
+            return redirect("post", username=username, post_id=post.id)
         return render(request, 'edit_post.html', {"form": form})
 
     form = PostForm(instance=post)
