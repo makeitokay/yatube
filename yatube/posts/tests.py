@@ -22,6 +22,9 @@ class EmailTest(TestCase):
         """Проверяет, что после регистрации пользователю отправилось письмо"""
         self.assertEqual(len(mail.outbox) - 1, self.start_outbox_size)
 
+    def test_email_subject(self):
+        self.assertEqual(mail.outbox[-1].subject, "Регистрация на Yatube")
+
 
 class ProfileTest(TestCase):
     def setUp(self) -> None:
@@ -96,4 +99,4 @@ class EditPost(TestCase):
             "text": "Автора взломали"
         }, follow=True)
 
-        self.assertIn(("/", 302), response.redirect_chain)
+        self.assertIn(("/vasya2005/1", 302), response.redirect_chain)
