@@ -1,7 +1,16 @@
 from django.core import mail
 from django.test import TestCase, Client
 
-from .models import User, Post
+from .models import User
+
+
+class GeneralTest(TestCase):
+    def setUp(self) -> None:
+        self.client = Client()
+
+    def test_not_found_error(self):
+        response = self.client.get("/fsgdgdgbr/hdfbdfbth")
+        self.assertEqual(response.status_code, 404)
 
 
 class EmailTest(TestCase):
@@ -99,4 +108,4 @@ class EditPost(TestCase):
             "text": "Автора взломали"
         }, follow=True)
 
-        self.assertIn(("/vasya2005/1", 302), response.redirect_chain)
+        self.assertIn(("/vasya2005/1/", 302), response.redirect_chain)

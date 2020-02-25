@@ -17,16 +17,23 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.flatpages import views
+# noinspection PyUnresolvedReferences
+from django.conf.urls import handler404, handler500
+
+# noinspection PyRedeclaration
+handler404 = "posts.views.page_not_found"
+# noinspection PyRedeclaration
+handler500 = "posts.views.server_error"
 
 urlpatterns = [
-        path('about-us/', views.flatpage, {'url': '/about-us/'}, name='about_us'),
-        path('about-author/', views.flatpage, {'url': '/about-author/'}, name='about_author'),
-        path('about-spec/', views.flatpage, {'url': '/about-spec/'}, name='about_spec'),
-        path('terms/', views.flatpage, {'url': '/terms/'}, name='terms'),
-        path("about/", include("django.contrib.flatpages.urls")),
+    path('about-us/', views.flatpage, {'url': '/about-us/'}, name='about_us'),
+    path('about-author/', views.flatpage, {'url': '/about-author/'}, name='about_author'),
+    path('about-spec/', views.flatpage, {'url': '/about-spec/'}, name='about_spec'),
+    path('terms/', views.flatpage, {'url': '/terms/'}, name='terms'),
+    path("about/", include("django.contrib.flatpages.urls")),
 
-        path("", include("posts.urls")),
-        path("auth/", include("users.urls")),
-        path("auth/", include("django.contrib.auth.urls")),
-        path("admin/", admin.site.urls),
+    path("", include("posts.urls")),
+    path("auth/", include("users.urls")),
+    path("auth/", include("django.contrib.auth.urls")),
+    path("admin/", admin.site.urls),
 ]
