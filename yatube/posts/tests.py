@@ -139,3 +139,9 @@ class ImageTest(TestCase):
     def test_group(self):
         response = self.client.get("/group/testGroup", follow=True)
         self.assertContains(response, '<img class="card-img"')
+
+    def test_graphic_secure(self):
+        with open("posts/urls.py", mode="rb") as image:
+            self.client.post("/new/", {"text": "test", "image": image})
+            # Если форма создания не валидна, то пост не должен был добавиться в базу данных:
+            self.assertFalse(Post.objects.filter(pk=2).exists())
