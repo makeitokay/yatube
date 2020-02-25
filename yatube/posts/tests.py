@@ -1,7 +1,9 @@
+import os
+
 from django.core import mail
 from django.test import TestCase, Client
 
-from .models import User
+from .models import User, Post, Group
 
 
 class GeneralTest(TestCase):
@@ -109,3 +111,31 @@ class EditPost(TestCase):
         }, follow=True)
 
         self.assertIn(("/vasya2005/1/", 302), response.redirect_chain)
+
+
+class ImageTest(TestCase):
+    def setUp(self) -> None:
+        self.client = Client()
+        self.user = User.objects.create_user(username="test", email="test@test.ru", password="test")
+        self.group = Group.objects.create(title="testGroup", slug="testGroup")
+        self.client.force_login(self.user)
+
+        # Создадим пост с картинкой (картинка test_image.jpg лежит в корневой папке)
+        with open("../test_image.jpg", mode="rb") as image:
+            self.client.post("/new/", {"text": "test", "image": image, "group": self.group.id})
+
+    def test_index(self):
+        response = self.client.get("/", follow=True)
+        self.assertContains(response, '<img class="card-img"')
+
+    def test_post_page(self):
+        response = self.client.get("/test/1/", follow=True)
+        self.assertContains(response, '<img class="card-img"')
+
+    def test_profile(self):
+        response = self.client.get("/test/", follow=True)
+        self.assertContains(response, '<img class="card-img"')
+
+    def test_group(self):
+        response = self.client.get("/group/testGroup", follow=True)
+        self.assertContains(response, '<img class="card-img"')

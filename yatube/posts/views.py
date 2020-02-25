@@ -26,18 +26,17 @@ def index(request):
 
 @login_required
 def new_post(request):
+    form = PostForm(request.POST or None, files=request.FILES or None)
     if request.method == "POST":
-        form = PostForm(request.POST)
         if form.is_valid():
             user = request.user
             text = form.cleaned_data["text"]
             group = form.cleaned_data["group"]
-            post = Post.objects.create(text=text, group=group, author=user)
+            image = form.cleaned_data["image"]
+            post = Post.objects.create(text=text, group=group, image=image, author=user)
 
             return redirect("post", username=user.username, post_id=post.id)
-        return render(request, 'new_post.html', {"form": form})
 
-    form = PostForm()
     return render(request, 'new_post.html', {"form": form})
 
 
@@ -73,21 +72,21 @@ def profile(request, username):
     return render(request, "profile.html", {'profile': profile, 'page': page, 'paginator': paginator, "posts_count": posts_count})
 
 
+@login_required
 def post_edit(request, username, post_id):
     post = get_object_or_404(Post, pk=post_id, author__username=username)
+    user = get_object_or_404(User, username=username)
 
-    if request.user.username != username:
+    if request.user != user:
         return redirect("post", username=username, post_id=post.id)
 
+    form = PostForm(request.POST or None, files=request.FILES or None, instance=post)
     if request.method == "POST":
-        form = PostForm(request.POST, instance=post)
         if form.is_valid():
-            post.text = form.cleaned_data["text"]
-            post.group = form.cleaned_data["group"]
-            post.save()
-
+            # post.text = form.cleaned_data["text"]
+            # post.group = form.cleaned_data["group"]
+            # post.save()
+            form.save()
             return redirect("post", username=username, post_id=post.id)
-        return render(request, 'edit_post.html', {"form": form})
 
-    form = PostForm(instance=post)
     return render(request, 'edit_post.html', {"form": form, "post": post})
