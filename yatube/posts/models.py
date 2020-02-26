@@ -17,3 +17,10 @@ class Post(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="post_author")
     group = models.ForeignKey(Group, blank=True, null=True, on_delete=models.CASCADE, related_name="post_group")
     image = models.ImageField(upload_to='posts/', blank=True, null=True)
+
+
+class Comment(models.Model):
+    text = models.TextField()
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comment_post")
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comment_author")
+    created = models.DateTimeField("date created", auto_now_add=True)

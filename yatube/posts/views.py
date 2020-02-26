@@ -1,10 +1,10 @@
 from django.core.paginator import Paginator
 
-from .models import Post, User, Group
+from .models import Post, User, Group, Comment
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 
-from .forms import PostForm
+from .forms import PostForm, CommentForm
 
 
 def page_not_found(request, exception):
@@ -40,12 +40,25 @@ def new_post(request):
     return render(request, 'new_post.html', {"form": form})
 
 
-def view_post(request, username, post_id):
-    profile = User.objects.get(username=username)
-    post = Post.objects.get(pk=post_id)
-    posts_count = Post.objects.filter(author__id=profile.id).count()
+def view_post(request, username, post_id, comment_post=None):
+    profile = get_object_or_404(User, username=username)
+    post = get_object_or_404(Post, pk=post_id)
+    posts_count = Post.objects.filter(author=profile).count()
 
-    return render(request, 'post.html', {"profile": profile, "post": post, "posts_count": posts_count})
+    comments = Comment.objects.filter(post=post)
+    form = CommentForm(comment_post)
+
+    return render(
+        request,
+        'post.html',
+        {
+            "profile": profile,
+            "post": post,
+            "posts_count": posts_count,
+            "comments": comments,
+            "form": form,
+        }
+    )
 
 
 def group_posts(request, slug):
@@ -83,10 +96,21 @@ def post_edit(request, username, post_id):
     form = PostForm(request.POST or None, files=request.FILES or None, instance=post)
     if request.method == "POST":
         if form.is_valid():
-            # post.text = form.cleaned_data["text"]
-            # post.group = form.cleaned_data["group"]
-            # post.save()
             form.save()
             return redirect("post", username=username, post_id=post.id)
 
     return render(request, 'edit_post.html', {"form": form, "post": post})
+
+
+@login_required
+def add_comment(request, username, post_id):
+    post = get_object_or_404(Post, pk=post_id, author__username=username)
+
+    form = CommentForm(request.POST or None)
+    if request.method == "POST":
+        if form.is_valid():
+            author = request.user
+            text = form.cleaned_data["text"]
+            Comment.objects.create(text=text, author=author, post=post)
+
+    return redirect("post", username=username, post_id=post.id)
