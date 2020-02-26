@@ -1,4 +1,5 @@
 from django.core.paginator import Paginator
+from django.db.models import Count
 
 from .models import Post, User, Group, Comment
 from django.shortcuts import render, redirect, get_object_or_404
@@ -41,9 +42,11 @@ def new_post(request):
 
 
 def view_post(request, username, post_id, comment_post=None):
-    profile = get_object_or_404(User, username=username)
-    post = get_object_or_404(Post, pk=post_id)
-    posts_count = Post.objects.filter(author=profile).count()
+    profile = get_object_or_404(
+        User.objects.annotate(posts_count=Count("post_author")),
+        username=username
+    )
+    post = get_object_or_404(Post.objects.annotate(comment_count=Count("comment_post")), pk=post_id)
 
     comments = Comment.objects.filter(post=post)
     form = CommentForm(comment_post)
@@ -54,7 +57,6 @@ def view_post(request, username, post_id, comment_post=None):
         {
             "profile": profile,
             "post": post,
-            "posts_count": posts_count,
             "comments": comments,
             "form": form,
         }
@@ -64,7 +66,7 @@ def view_post(request, username, post_id, comment_post=None):
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
 
-    posts = Post.objects.filter(group=group).order_by("-pub_date").all()
+    posts = Post.objects.filter(group=group).order_by("-pub_date").all().annotate(comment_count=Count("comment_post"))
     paginator = Paginator(posts, 10)
 
     page_number = request.GET.get('page')
@@ -74,7 +76,7 @@ def group_posts(request, slug):
 
 def profile(request, username):
     profile = get_object_or_404(User, username=username)
-    post_list = Post.objects.filter(author=profile).order_by("-pub_date").all()
+    post_list = Post.objects.filter(author=profile).order_by("-pub_date").all().annotate(comment_count=Count("comment_post"))
     paginator = Paginator(post_list, 10)
 
     page_number = request.GET.get('page')
@@ -87,7 +89,7 @@ def profile(request, username):
 
 @login_required
 def post_edit(request, username, post_id):
-    post = get_object_or_404(Post, pk=post_id, author__username=username)
+    post = get_object_or_404(Post.objects.annotate(comment_count=Count("comment_post")), pk=post_id, author__username=username)
     user = get_object_or_404(User, username=username)
 
     if request.user != user:
@@ -103,8 +105,19 @@ def post_edit(request, username, post_id):
 
 
 @login_required
+def post_delete(request, username, post_id):
+    post = get_object_or_404(Post, pk=post_id, author__username=username).annotate(comment_count=Count("comment_post"))
+
+    if request.user.username != username:
+        return redirect("post", username=username, post_id=post_id)
+
+    post.delete()
+    return redirect("profile", username=username)
+
+
+@login_required
 def add_comment(request, username, post_id):
-    post = get_object_or_404(Post, pk=post_id, author__username=username)
+    post = get_object_or_404(Post.objects.annotate(comment_count=Count("comment_post")), pk=post_id, author__username=username)
 
     form = CommentForm(request.POST or None)
     if request.method == "POST":
