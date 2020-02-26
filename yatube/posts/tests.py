@@ -1,9 +1,15 @@
-import os
-
 from django.core import mail
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 
 from .models import User, Post, Group
+
+
+# Disable caching by using DummyCache
+TEST_CACHE = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
 
 
 class GeneralTest(TestCase):
@@ -51,6 +57,8 @@ class CreatePostTest(TestCase):
     def setUp(self) -> None:
         self.client = Client()
         self.user = User.objects.create_user(username="vasya2005", email="vasya@mail.ru", password="vasya")
+        # Отправляем запрос на главную страницу, чтобы она закешировалась
+        self.client.get("/", follow=True)
 
     def test_publish_post(self):
         self.client.force_login(self.user)
@@ -61,6 +69,7 @@ class CreatePostTest(TestCase):
         new_post_response = self.client.get("/new/", follow=True)
         self.assertIn(("/auth/login/?next=/new/", 302), new_post_response.redirect_chain)
 
+    @override_settings(CACHES=TEST_CACHE)
     def test_new_post(self):
         self.client.force_login(self.user)
         self.client.post("/new/", {
@@ -76,7 +85,15 @@ class CreatePostTest(TestCase):
         post_response = self.client.get("/vasya2005/1/", follow=True)
         self.assertContains(post_response, "Очень интересный пост о жизни")
 
+    def test_cache(self):
+        self.client.force_login(self.user)
+        self.client.post("/new/", {
+            "text": "Очень интересный пост о жизни",
+        }, follow=True)
+        self.assertNotContains(self.client.get("/", follow=True), "Очень интересный пост о жизни")
 
+
+@override_settings(CACHES=TEST_CACHE)
 class EditPost(TestCase):
     def setUp(self) -> None:
         self.client = Client()
@@ -113,6 +130,7 @@ class EditPost(TestCase):
         self.assertIn(("/vasya2005/1/", 302), response.redirect_chain)
 
 
+@override_settings(CACHES=TEST_CACHE)
 class ImageTest(TestCase):
     def setUp(self) -> None:
         self.client = Client()
