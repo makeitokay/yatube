@@ -1,7 +1,7 @@
 from django.core.paginator import Paginator
 from django.db.models import Count
 
-from .models import Post, User, Group, Comment
+from .models import Post, User, Group, Comment, Favorite
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 
@@ -82,9 +82,20 @@ def profile(request, username):
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
 
-    posts_count = Post.objects.filter(author=profile).count()
+    following = False
+    if request.user.is_authenticated:
+        following = Favorite.objects.filter(author=profile, user=request.user).exists()
 
-    return render(request, "profile.html", {'profile': profile, 'page': page, 'paginator': paginator, "posts_count": posts_count})
+    return render(
+        request,
+        "profile.html",
+        {
+            'profile': profile,
+            'page': page,
+            'paginator': paginator,
+            'following': following
+        }
+    )
 
 
 @login_required
@@ -127,3 +138,29 @@ def add_comment(request, username, post_id):
             Comment.objects.create(text=text, author=author, post=post)
 
     return redirect("post", username=username, post_id=post.id)
+
+
+@login_required
+def follow_index(request):
+    follow = Favorite.objects.values_list("author", flat=True).filter(user=request.user)
+    posts = Post.objects.filter(author__in=follow).order_by("-pub_date").annotate(comment_count=Count("comment_post"))
+    paginator = Paginator(posts, 10)
+
+    page_number = request.GET.get('page')
+    page = paginator.get_page(page_number)
+    return render(request, "follow.html", {"posts": posts, "page": page, "paginator": paginator})
+
+
+@login_required
+def profile_follow(request, username):
+    user = get_object_or_404(User, username=username)
+    Favorite.objects.create(user=request.user, author=user)
+    return redirect("profile", username=username)
+
+
+@login_required
+def profile_unfollow(request, username):
+    user = get_object_or_404(User, username=username)
+    follow = get_object_or_404(Favorite, user=request.user, author=user)
+    follow.delete()
+    return redirect("profile", username=username)

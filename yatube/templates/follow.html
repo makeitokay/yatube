@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% load cache %}
-{% block title %} Последние обновления {% endblock %}
+{% block title %} Подписки {% endblock %}
 
 {% block content %}
 <main role="main" class="container">
-{% include "menu.html" with index=True %}
+{% include "menu.html" with follow=True %}
 <div class="row">
 
-        <h1> Последние обновления на сайте</h1>
+        <h1> Ваши подписки </h1>
 
-        {% cache 20 index_page %}
+        {% cache 20 follow_page %}
             <!-- Вывод ленты записей -->
             {% for post in page %}
                 <!-- Вот он, новый include! -->

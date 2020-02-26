@@ -163,3 +163,51 @@ class ImageTest(TestCase):
             self.client.post("/new/", {"text": "test", "image": image})
             # Если форма создания не валидна, то пост не должен был добавиться в базу данных:
             self.assertFalse(Post.objects.filter(pk=2).exists())
+
+
+@override_settings(CACHES=TEST_CACHE)
+class FavoriteTest(TestCase):
+    def setUp(self) -> None:
+        self.client = Client()
+        self.user = User.objects.create_user(username="test", email="test@test.ru", password="test")
+        self.other_user = User.objects.create_user(username="other", email="other@other.ru", password="other")
+
+        Post.objects.create(text="Test post", author=self.user)
+        Post.objects.create(text="Other post", author=self.other_user)
+
+    def test_follow(self):
+        self.client.force_login(self.user)
+
+        follow = self.client.get("/other/follow/", follow=True)
+        follow_index = self.client.get("/follow/")
+        self.assertIn(("/other/", 302), follow.redirect_chain)
+        self.assertContains(follow_index, "Other post")
+
+    def test_unfollow(self):
+        self.client.force_login(self.user)
+
+        # Подписались
+        self.client.get("/other/follow/", follow=True)
+        # Удаляем из подписок
+        unfollow = self.client.get("/other/unfollow/", follow=True)
+        follow_index = self.client.get("/follow/")
+        self.assertIn(("/other/", 302), unfollow.redirect_chain)
+        self.assertNotContains(follow_index, "Other post")
+
+    def test_follow_index_page(self):
+        self.client.force_login(self.user)
+        follow_index = self.client.get("/follow/")
+        # Мы не подписывались на юзера other, поэтому поста не должно быть
+        self.assertNotContains(follow_index, "Other post")
+
+
+class CommentTest(TestCase):
+    def setUp(self) -> None:
+        self.client = Client()
+        self.user = User.objects.create_user(username="test", email="test@test.ru", password="test")
+
+        Post.objects.create(text="Test post", author=self.user)
+
+    def test_login_required(self):
+        response = self.client.post("/test/1/comment/", {"text": "Комментарий"}, follow=True)
+        self.assertIn(('/auth/login/?next=/test/1/comment/', 302), response.redirect_chain)
