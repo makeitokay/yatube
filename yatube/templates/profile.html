@@ -23,9 +23,10 @@
                                 </li>
                                 <li class="list-group-item">
                                         <div class="h6 text-muted">
-                                            Записей: {{ posts_count }}
+                                            Записей: {{ profile.posts_count }}
                                         </div>
                                 </li>
+                                {% if user and user.username != profile.username %}
                                 <li class="list-group-item">
                                 {% if following %}
                                 <a class="btn btn-lg btn-light"
@@ -39,6 +40,7 @@
                                 </a>
                                 {% endif %}
                                 </li>
+                                {% endif %}
                             </ul>
                     </div>
             </div>

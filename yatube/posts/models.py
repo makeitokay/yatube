@@ -26,6 +26,6 @@ class Comment(models.Model):
     created = models.DateTimeField("date created", auto_now_add=True)
 
 
-class Favorite(models.Model):
+class Follow(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="follower")
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="following")

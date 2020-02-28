@@ -1,7 +1,7 @@
 from django.core.paginator import Paginator
 from django.db.models import Count
 
-from .models import Post, User, Group, Comment, Favorite
+from .models import Post, User, Group, Comment, Follow
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 
@@ -17,7 +17,7 @@ def server_error(request):
 
 
 def index(request):
-    post_list = Post.objects.order_by("-pub_date").all()
+    post_list = Post.objects.order_by("-pub_date").annotate(comment_count=Count("comment_post")).all()
     paginator = Paginator(post_list, 10)
 
     page_number = request.GET.get('page')
@@ -75,7 +75,7 @@ def group_posts(request, slug):
 
 
 def profile(request, username):
-    profile = get_object_or_404(User, username=username)
+    profile = get_object_or_404(User.objects.annotate(posts_count=Count("post_author")), username=username)
     post_list = Post.objects.filter(author=profile).order_by("-pub_date").all().annotate(comment_count=Count("comment_post"))
     paginator = Paginator(post_list, 10)
 
@@ -84,7 +84,7 @@ def profile(request, username):
 
     following = False
     if request.user.is_authenticated:
-        following = Favorite.objects.filter(author=profile, user=request.user).exists()
+        following = Follow.objects.filter(author=profile, user=request.user).exists()
 
     return render(
         request,
@@ -142,7 +142,7 @@ def add_comment(request, username, post_id):
 
 @login_required
 def follow_index(request):
-    follow = Favorite.objects.values_list("author", flat=True).filter(user=request.user)
+    follow = Follow.objects.values_list("author", flat=True).filter(user=request.user)
     posts = Post.objects.filter(author__in=follow).order_by("-pub_date").annotate(comment_count=Count("comment_post"))
     paginator = Paginator(posts, 10)
 
@@ -154,13 +154,15 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     user = get_object_or_404(User, username=username)
-    Favorite.objects.create(user=request.user, author=user)
+    if request.user.username == username or Follow.objects.filter(user=request.user, author=user).exists():
+        return redirect("profile", username=username)
+    Follow.objects.create(user=request.user, author=user)
     return redirect("profile", username=username)
 
 
 @login_required
 def profile_unfollow(request, username):
     user = get_object_or_404(User, username=username)
-    follow = get_object_or_404(Favorite, user=request.user, author=user)
+    follow = get_object_or_404(Follow, user=request.user, author=user)
     follow.delete()
     return redirect("profile", username=username)
