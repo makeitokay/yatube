@@ -17,12 +17,18 @@ def server_error(request):
 
 
 def index(request):
-    post_list = Post.objects.order_by("-pub_date").annotate(comment_count=Count("comment_post")).all()
+    post_list = (
+        Post.objects.select_related("author")
+        .select_related("group")
+        .order_by("-pub_date")
+        .annotate(comment_count=Count("comment_post"))
+        .all()
+    )
     paginator = Paginator(post_list, 10)
 
-    page_number = request.GET.get('page')
+    page_number = request.GET.get("page")
     page = paginator.get_page(page_number)
-    return render(request, 'index.html', {'page': page, 'paginator': paginator})
+    return render(request, "index.html", {"page": page, "paginator": paginator})
 
 
 @login_required
@@ -38,48 +44,67 @@ def new_post(request):
 
             return redirect("post", username=user.username, post_id=post.id)
 
-    return render(request, 'new_post.html', {"form": form})
+    return render(request, "new_post.html", {"form": form})
 
 
 def view_post(request, username, post_id, comment_post=None):
     profile = get_object_or_404(
-        User.objects.annotate(posts_count=Count("post_author")),
-        username=username
+        User.objects.annotate(posts_count=Count("post_author")), username=username
     )
-    post = get_object_or_404(Post.objects.annotate(comment_count=Count("comment_post")), pk=post_id)
+    post = get_object_or_404(
+        Post.objects.select_related("author")
+        .select_related("group")
+        .annotate(comment_count=Count("comment_post")),
+        pk=post_id,
+    )
 
     comments = Comment.objects.filter(post=post)
     form = CommentForm(comment_post)
 
     return render(
         request,
-        'post.html',
-        {
-            "profile": profile,
-            "post": post,
-            "comments": comments,
-            "form": form,
-        }
+        "post.html",
+        {"profile": profile, "post": post, "comments": comments, "form": form,},
     )
 
 
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
 
-    posts = Post.objects.filter(group=group).order_by("-pub_date").all().annotate(comment_count=Count("comment_post"))
+    posts = (
+        Post.objects.filter(group=group)
+        .select_related("author")
+        .select_related("group")
+        .order_by("-pub_date")
+        .annotate(comment_count=Count("comment_post"))
+        .all()
+    )
     paginator = Paginator(posts, 10)
 
-    page_number = request.GET.get('page')
+    page_number = request.GET.get("page")
     page = paginator.get_page(page_number)
-    return render(request, "group.html", {"group": group, "posts": posts, "page": page, "paginator": paginator})
+    return render(
+        request,
+        "group.html",
+        {"group": group, "posts": posts, "page": page, "paginator": paginator},
+    )
 
 
 def profile(request, username):
-    profile = get_object_or_404(User.objects.annotate(posts_count=Count("post_author")), username=username)
-    post_list = Post.objects.filter(author=profile).order_by("-pub_date").all().annotate(comment_count=Count("comment_post"))
+    profile = get_object_or_404(
+        User.objects.annotate(posts_count=Count("post_author")), username=username
+    )
+    post_list = (
+        Post.objects.filter(author=profile)
+        .select_related("author")
+        .select_related("group")
+        .order_by("-pub_date")
+        .all()
+        .annotate(comment_count=Count("comment_post"))
+    )
     paginator = Paginator(post_list, 10)
 
-    page_number = request.GET.get('page')
+    page_number = request.GET.get("page")
     page = paginator.get_page(page_number)
 
     following = False
@@ -90,17 +115,21 @@ def profile(request, username):
         request,
         "profile.html",
         {
-            'profile': profile,
-            'page': page,
-            'paginator': paginator,
-            'following': following
-        }
+            "profile": profile,
+            "page": page,
+            "paginator": paginator,
+            "following": following,
+        },
     )
 
 
 @login_required
 def post_edit(request, username, post_id):
-    post = get_object_or_404(Post.objects.annotate(comment_count=Count("comment_post")), pk=post_id, author__username=username)
+    post = get_object_or_404(
+        Post.objects.annotate(comment_count=Count("comment_post")),
+        pk=post_id,
+        author__username=username,
+    )
     user = get_object_or_404(User, username=username)
 
     if request.user != user:
@@ -112,12 +141,14 @@ def post_edit(request, username, post_id):
             form.save()
             return redirect("post", username=username, post_id=post.id)
 
-    return render(request, 'edit_post.html', {"form": form, "post": post})
+    return render(request, "edit_post.html", {"form": form, "post": post})
 
 
 @login_required
 def post_delete(request, username, post_id):
-    post = get_object_or_404(Post, pk=post_id, author__username=username).annotate(comment_count=Count("comment_post"))
+    post = get_object_or_404(Post, pk=post_id, author__username=username).annotate(
+        comment_count=Count("comment_post")
+    )
 
     if request.user.username != username:
         return redirect("post", username=username, post_id=post_id)
@@ -128,7 +159,11 @@ def post_delete(request, username, post_id):
 
 @login_required
 def add_comment(request, username, post_id):
-    post = get_object_or_404(Post.objects.annotate(comment_count=Count("comment_post")), pk=post_id, author__username=username)
+    post = get_object_or_404(
+        Post.objects.annotate(comment_count=Count("comment_post")),
+        pk=post_id,
+        author__username=username,
+    )
 
     form = CommentForm(request.POST or None)
     if request.method == "POST":
@@ -143,18 +178,29 @@ def add_comment(request, username, post_id):
 @login_required
 def follow_index(request):
     follow = Follow.objects.values_list("author", flat=True).filter(user=request.user)
-    posts = Post.objects.filter(author__in=follow).order_by("-pub_date").annotate(comment_count=Count("comment_post"))
+    posts = (
+        Post.objects.filter(author__in=follow)
+        .select_related("author")
+        .select_related("group")
+        .order_by("-pub_date")
+        .annotate(comment_count=Count("comment_post"))
+    )
     paginator = Paginator(posts, 10)
 
-    page_number = request.GET.get('page')
+    page_number = request.GET.get("page")
     page = paginator.get_page(page_number)
-    return render(request, "follow.html", {"posts": posts, "page": page, "paginator": paginator})
+    return render(
+        request, "follow.html", {"posts": posts, "page": page, "paginator": paginator}
+    )
 
 
 @login_required
 def profile_follow(request, username):
     user = get_object_or_404(User, username=username)
-    if request.user.username == username or Follow.objects.filter(user=request.user, author=user).exists():
+    if (
+        request.user.username == username
+        or Follow.objects.filter(user=request.user, author=user).exists()
+    ):
         return redirect("profile", username=username)
     Follow.objects.create(user=request.user, author=user)
     return redirect("profile", username=username)

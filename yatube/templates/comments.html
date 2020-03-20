@@ -4,9 +4,9 @@
 <div class="media-body">
         <h5 class="mt-0">
         <a
-                href="{% url 'profile' comment.author.username %}"
+                href="{% url 'profile' post.author.username %}"
                 name="comment_{{ comment.id }}"
-                >{{ comment.author.username }}</a>
+                >{{ post.author.username }}</a>
         </h5>
         {{ comment.text }}
 </div>
