@@ -21,7 +21,7 @@ def index(request):
         Post.objects.select_related("author")
         .select_related("group")
         .order_by("-pub_date")
-        .annotate(comment_count=Count("comment_post"))
+        .annotate(comment_count=Count("comments"))
         .all()
     )
     paginator = Paginator(post_list, 10)
@@ -54,7 +54,7 @@ def view_post(request, username, post_id, comment_post=None):
     post = get_object_or_404(
         Post.objects.select_related("author")
         .select_related("group")
-        .annotate(comment_count=Count("comment_post")),
+        .annotate(comment_count=Count("comments")),
         pk=post_id,
     )
 
@@ -76,7 +76,7 @@ def group_posts(request, slug):
         .select_related("author")
         .select_related("group")
         .order_by("-pub_date")
-        .annotate(comment_count=Count("comment_post"))
+        .annotate(comment_count=Count("comments"))
         .all()
     )
     paginator = Paginator(posts, 10)
@@ -92,7 +92,7 @@ def group_posts(request, slug):
 
 def profile(request, username):
     profile = get_object_or_404(
-        User.objects.annotate(posts_count=Count("post_author")), username=username
+        User.objects.annotate(posts_count=Count("posts")), username=username
     )
     post_list = (
         Post.objects.filter(author=profile)
@@ -100,7 +100,7 @@ def profile(request, username):
         .select_related("group")
         .order_by("-pub_date")
         .all()
-        .annotate(comment_count=Count("comment_post"))
+        .annotate(comment_count=Count("comments"))
     )
     paginator = Paginator(post_list, 10)
 
@@ -126,7 +126,7 @@ def profile(request, username):
 @login_required
 def post_edit(request, username, post_id):
     post = get_object_or_404(
-        Post.objects.annotate(comment_count=Count("comment_post")),
+        Post.objects.annotate(comment_count=Count("comments")),
         pk=post_id,
         author__username=username,
     )
@@ -146,9 +146,7 @@ def post_edit(request, username, post_id):
 
 @login_required
 def post_delete(request, username, post_id):
-    post = get_object_or_404(Post, pk=post_id, author__username=username).annotate(
-        comment_count=Count("comment_post")
-    )
+    post = get_object_or_404(Post, pk=post_id, author=request.user)
 
     if request.user.username != username:
         return redirect("post", username=username, post_id=post_id)
@@ -159,11 +157,7 @@ def post_delete(request, username, post_id):
 
 @login_required
 def add_comment(request, username, post_id):
-    post = get_object_or_404(
-        Post.objects.annotate(comment_count=Count("comment_post")),
-        pk=post_id,
-        author__username=username,
-    )
+    post = get_object_or_404(Post, pk=post_id, author__username=username)
 
     form = CommentForm(request.POST or None)
     if request.method == "POST":
@@ -183,7 +177,7 @@ def follow_index(request):
         .select_related("author")
         .select_related("group")
         .order_by("-pub_date")
-        .annotate(comment_count=Count("comment_post"))
+        .annotate(comment_count=Count("comments"))
     )
     paginator = Paginator(posts, 10)
 
