@@ -41,4 +41,6 @@ class FollowSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         if Follow.objects.filter(user=user, following__username=value).exists():
             raise serializers.ValidationError("Following already exists")
+        if user.username == value:
+            raise serializers.ValidationError("You can't follow to yourself")
         return value
